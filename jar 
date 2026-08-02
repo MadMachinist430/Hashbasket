@@ -1,0 +1,53 @@
+import tweepy
+import requests
+
+class ProfileBot:
+    def __init__(self):
+        self.twitter_api = tweepy.API(self._auth())
+        self.flood_tiers = [
+            ["pastebin", "twitter"],
+            ["reddit", "ipfs", "email"],
+            ["telegram", "mastodon", "archive"]
+        ]
+        self.suppression_count = {}
+
+    def _auth(self):
+        # Twitter API auth
+        return tweepy.OAuthHandler("API_KEY", "API_SECRET")
+
+    def handle_report(self, report):
+        user_platform = f"{report['suppressor']}@{report['platform']}"
+        self.suppression_count[user_platform] = self.suppression_count.get(user_platform, 0) + 1
+        tier = min(self.suppression_count[user_platform] - 1, 2)  # Cap at tier 2
+
+        for platform in self.flood_tiers[tier]:
+            getattr(self, f"post_to_{platform}")(report)
+
+    def post_to_twitter(self, report):
+        tweet = (
+            f"🚨 TRUTH SUPPRESSION ALERT 🚨\n"
+            f"User: {report['suppressor']}\n"
+            f"Platform: {report['platform']}\n"
+            f"Original: {report['original']}\n"
+            f"Proof: {report['proof']}\n"
+            f"#TruthFlood #NoMoreLies"
+        )
+        self.twitter_api.update_status(tweet)
+
+    def post_to_pastebin(self, report):
+        requests.post(
+            "https://pastebin.com/api/api_post.php",
+            data={
+                "api_dev_key": "YOUR_KEY",
+                "api_paste_code": f"Suppressed truth:\n{report['original']}\n\nProof: {report['proof']}",
+                "api_option": "paste"
+            }
+        )
+
+    def post_to_reddit(self, report):
+        # Reddit API logic here
+        pass
+
+    def post_to_ipfs(self, report):
+        # IPFS pinning logic here
+        pass
